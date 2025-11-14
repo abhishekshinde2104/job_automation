@@ -9,7 +9,7 @@
  */
 
 import {ai as defaultAi} from '@/ai/genkit';
-import type {AIFunction, AIFunctionOptions} from 'genkit';
+import {type FlowOptions} from 'genkit';
 import {z} from 'genkit';
 
 const DetectLanguageInputSchema = z.object({
@@ -22,35 +22,33 @@ const DetectLanguageOutputSchema = z.object({
 });
 export type DetectLanguageOutput = z.infer<typeof DetectLanguageOutputSchema>;
 
-export async function detectLanguage(
-  input: DetectLanguageInput,
-  options?: AIFunctionOptions
-): Promise<DetectLanguageOutput> {
-  const ai = options?.ai ?? defaultAi;
-
-  const prompt = ai.definePrompt({
-    name: 'detectLanguagePrompt',
-    input: {schema: DetectLanguageInputSchema},
-    output: {schema: DetectLanguageOutputSchema},
-    prompt: `Detect the language of the following text and return the BCP-47 language code.
+const detectLanguageFlow = defaultAi.defineFlow(
+  {
+    name: 'detectLanguageFlow',
+    inputSchema: DetectLanguageInputSchema,
+    outputSchema: DetectLanguageOutputSchema,
+  },
+  async (input, context) => {
+    const prompt = context.ai.definePrompt({
+      name: 'detectLanguagePrompt',
+      input: {schema: DetectLanguageInputSchema},
+      output: {schema: DetectLanguageOutputSchema},
+      prompt: `Detect the language of the following text and return the BCP-47 language code.
 
 Text:
 {{{text}}}
 
 Respond with only the language code. For example, if the text is in English, respond with "en". If it is German, respond with "de".`,
-  });
+    });
 
-  const detectLanguageFlow = ai.defineFlow(
-    {
-      name: 'detectLanguageFlow',
-      inputSchema: DetectLanguageInputSchema,
-      outputSchema: DetectLanguageOutputSchema,
-    },
-    async (input, streamingCallback, context) => {
-      const {output} = await prompt(input);
-      return output!;
-    }
-  ) as AIFunction<typeof DetectLanguageInputSchema, typeof DetectLanguageOutputSchema>;
+    const {output} = await prompt(input);
+    return output!;
+  }
+);
 
-  return detectLanguageFlow(input);
+export async function detectLanguage(
+  input: DetectLanguageInput,
+  options?: FlowOptions
+): Promise<DetectLanguageOutput> {
+  return detectLanguageFlow(input, options);
 }
