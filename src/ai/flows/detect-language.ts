@@ -8,7 +8,8 @@
  * - DetectLanguageOutput - The return type for the detectLanguage function.
  */
 
-import {ai} from '@/ai/genkit';
+import {ai as defaultAi} from '@/ai/genkit';
+import type {AIFunction, AIFunctionOptions} from 'genkit';
 import {z} from 'genkit';
 
 const DetectLanguageInputSchema = z.object({
@@ -21,30 +22,35 @@ const DetectLanguageOutputSchema = z.object({
 });
 export type DetectLanguageOutput = z.infer<typeof DetectLanguageOutputSchema>;
 
-export async function detectLanguage(input: DetectLanguageInput): Promise<DetectLanguageOutput> {
-  return detectLanguageFlow(input);
-}
+export async function detectLanguage(
+  input: DetectLanguageInput,
+  options?: AIFunctionOptions
+): Promise<DetectLanguageOutput> {
+  const ai = options?.ai ?? defaultAi;
 
-const prompt = ai.definePrompt({
-  name: 'detectLanguagePrompt',
-  input: {schema: DetectLanguageInputSchema},
-  output: {schema: DetectLanguageOutputSchema},
-  prompt: `Detect the language of the following text and return the BCP-47 language code.
+  const prompt = ai.definePrompt({
+    name: 'detectLanguagePrompt',
+    input: {schema: DetectLanguageInputSchema},
+    output: {schema: DetectLanguageOutputSchema},
+    prompt: `Detect the language of the following text and return the BCP-47 language code.
 
 Text:
 {{{text}}}
 
 Respond with only the language code. For example, if the text is in English, respond with "en". If it is German, respond with "de".`,
-});
+  });
 
-const detectLanguageFlow = ai.defineFlow(
-  {
-    name: 'detectLanguageFlow',
-    inputSchema: DetectLanguageInputSchema,
-    outputSchema: DetectLanguageOutputSchema,
-  },
-  async input => {
-    const {output} = await prompt(input);
-    return output!;
-  }
-);
+  const detectLanguageFlow = ai.defineFlow(
+    {
+      name: 'detectLanguageFlow',
+      inputSchema: DetectLanguageInputSchema,
+      outputSchema: DetectLanguageOutputSchema,
+    },
+    async (input, streamingCallback, context) => {
+      const {output} = await prompt(input);
+      return output!;
+    }
+  ) as AIFunction<typeof DetectLanguageInputSchema, typeof DetectLanguageOutputSchema>;
+
+  return detectLanguageFlow(input);
+}

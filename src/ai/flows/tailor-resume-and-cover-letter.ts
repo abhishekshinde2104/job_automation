@@ -8,7 +8,8 @@
  * - TailorResumeAndCoverLetterOutput - The return type for the tailorResumeAndCoverLetter function.
  */
 
-import {ai} from '@/ai/genkit';
+import {ai as defaultAi} from '@/ai/genkit';
+import type {AIFunction, AIFunctionOptions} from 'genkit';
 import {z} from 'genkit';
 
 const TailorResumeAndCoverLetterInputSchema = z.object({
@@ -33,16 +34,16 @@ const TailorResumeAndCoverLetterOutputSchema = z.object({
 export type TailorResumeAndCoverLetterOutput = z.infer<typeof TailorResumeAndCoverLetterOutputSchema>;
 
 export async function tailorResumeAndCoverLetter(
-  input: TailorResumeAndCoverLetterInput
+  input: TailorResumeAndCoverLetterInput,
+  options?: AIFunctionOptions
 ): Promise<TailorResumeAndCoverLetterOutput> {
-  return tailorResumeAndCoverLetterFlow(input);
-}
+  const ai = options?.ai ?? defaultAi;
 
-const tailorResumeAndCoverLetterPrompt = ai.definePrompt({
-  name: 'tailorResumeAndCoverLetterPrompt',
-  input: {schema: TailorResumeAndCoverLetterInputSchema},
-  output: {schema: TailorResumeAndCoverLetterOutputSchema},
-  prompt: `You are an expert resume and cover letter tailor.
+  const tailorResumeAndCoverLetterPrompt = ai.definePrompt({
+    name: 'tailorResumeAndCoverLetterPrompt',
+    input: {schema: TailorResumeAndCoverLetterInputSchema},
+    output: {schema: TailorResumeAndCoverLetterOutputSchema},
+    prompt: `You are an expert resume and cover letter tailor.
 
 You will be provided with a resume, a cover letter, and a job description.
 Your goal is to tailor the resume and cover letter to match the job requirements described in the job description.
@@ -64,16 +65,19 @@ Tailored Resume:
 
 Tailored Cover Letter:
 {{tailoredCoverLetter}}`,
-});
+  });
 
-const tailorResumeAndCoverLetterFlow = ai.defineFlow(
-  {
-    name: 'tailorResumeAndCoverLetterFlow',
-    inputSchema: TailorResumeAndCoverLetterInputSchema,
-    outputSchema: TailorResumeAndCoverLetterOutputSchema,
-  },
-  async input => {
-    const {output} = await tailorResumeAndCoverLetterPrompt(input);
-    return output!;
-  }
-);
+  const tailorResumeAndCoverLetterFlow = ai.defineFlow(
+    {
+      name: 'tailorResumeAndCoverLetterFlow',
+      inputSchema: TailorResumeAndCoverLetterInputSchema,
+      outputSchema: TailorResumeAndCoverLetterOutputSchema,
+    },
+    async input => {
+      const {output} = await tailorResumeAndCoverLetterPrompt(input);
+      return output!;
+    }
+  ) as AIFunction<typeof TailorResumeAndCoverLetterInputSchema, typeof TailorResumeAndCoverLetterOutputSchema>;
+
+  return tailorResumeAndCoverLetterFlow(input);
+}
